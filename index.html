@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TENG Wind Direction Detection System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #004d99;
+            --highlight-color: #00aaff;
+            --bg-dark: #f0f4f8;
+            --bg-darker: #e1e8ed;
+            --text-color: #2d3748;
+            --border-color: #cbd5e0;
+            --accent-color: #1abc9c;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            font-family: 'Roboto', sans-serif;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            text-align: center;
+        }
+
+        .thesis-header {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 30px;
+            text-align: center;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .thesis-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+
+        .thesis-subtitle {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+
+        .thesis-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #718096;
+            padding: 15px 0 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 15px;
+        }
+
+        .developer-info {
+            font-style: italic;
+            margin-top: 10px;
+            color: var(--primary-color);
+        }
+
+        #particle-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0;
+            filter: blur(0.5px);
+            background: rgba(52, 152, 219, 0.3);
+        }
+
+        .compass-container {
+            position: relative;
+            width: 380px;
+            height: 380px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            margin: 20px 0;
+        }
+
+        .compass-outer-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .compass-inner-ring {
+            position: absolute;
+            width: 90%;
+            height: 90%;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+        }
+
+        .compass-rose {
+            position: relative;
+            width: 70%;
+            height: 70%;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.5s ease-out;
+        }
+
+        .direction-arrow-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+        }
+
+        .direction-arrow {
+            position: relative;
+            width: 4px;
+            height: 50%;
+            background: var(--primary-color);
+            transform-origin: center center;
+            transition: transform 0.5s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+
+        .direction-arrow::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            left: -10px;
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 20px solid var(--primary-color);
+        }
+
+        .compass-center {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            z-index: 6;
+            box-shadow: 0 0 0 4px rgba(26, 188, 156, 0.3);
+        }
+
+        .compass-label {
+            position: absolute;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-color);
+            transform-style: preserve-3d;
+        }
+
+        .n { top: 15px; }
+        .e { right: 15px; }
+        .s { bottom: 15px; }
+        .w { left: 15px; }
+
+        .compass-cardinal-line {
+            position: absolute;
+            background: linear-gradient(to bottom, 
+                      rgba(0, 102, 204, 0), 
+                      var(--primary-color), 
+                      rgba(0, 102, 204, 0));
+            width: 1px;
+            height: 100%;
+            transform-origin: center center;
+        }
+
+        .status-panel {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .current-direction {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--accent-color);
+            min-height: 40px;
+        }
+
+        .system-status {
+            font-size: 16px;
+            color: var(--text-color);
+            min-height: 20px;
+        }
+
+        .history-panel {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .history-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .history-direction {
+            font-weight: 500;
+            color: var(--secondary-color);
+        }
+
+        .history-time {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        @keyframes highlightDirection {
+            0% { color: var(--text-color); }
+            50% { color: var(--highlight-color); }
+            100% { color: var(--text-color); }
+        }
+
+        @keyframes initialSweep {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .compass-container {
+                width: 300px;
+                height: 300px;
+            }
+            
+            .thesis-title {
+                font-size: 22px;
+            }
+            
+            .thesis-subtitle {
+                font-size: 16px;
+            }
+            
+            .current-direction {
+                font-size: 24px;
+            }
+        }
+
+        /* Custom scrollbar */
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .history-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .history-list::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="thesis-header">
+        <div class="thesis-title">Triboelectric Nanogenerator Wind Direction Detection System</div>
+        <div class="thesis-subtitle">A TENG Sensor Based Approach for Real-Time Wind Direction Detection</div>
+        <div class="thesis-info">
+            <span>Department of Electronics and Communication Engineering</span>
+            <span>MNIT - Embedded System</span>
+            <span>2025</span>
+        </div>
+        <div class="developer-info">Developed by Panchang Bhardwaj under supervision of Deepak Bharti</div>
+    </div>
+
+    <div id="particle-container"></div>
+
+    <div class="compass-container">
+        <div class="compass-outer-ring"></div>
+        <div class="compass-inner-ring"></div>
+        
+        <div class="compass-rose">
+            <div class="compass-cardinal-line" style="transform: rotate(0deg);"></div>
+            <div class="compass-cardinal-line" style="transform: rotate(45deg);"></div>
+            <div class="compass-cardinal-line" style="transform: rotate(90deg);"></div>
+            <div class="compass-cardinal-line" style="transform: rotate(135deg);"></div>
+            
+            <div class="direction-arrow-container">
+                <div class="direction-arrow" id="direction-arrow"></div>
+            </div>
+            
+            <div class="compass-center"></div>
+            
+            <div class="compass-label n">N</div>
+            <div class="compass-label e">E</div>
+            <div class="compass-label s">S</div>
+            <div class="compass-label w">W</div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="current-direction" id="current-direction">--</div>
+        <div class="system-status" id="system-status">Initializing TENG sensor system...</div>
+    </div>
+
+    <div class="history-panel">
+        <div class="history-title">DIRECTION HISTORY</div>
+        <div class="history-list" id="history-list">
+            <!-- History items will be added here dynamically -->
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const directionArrow = document.getElementById('direction-arrow');
+        const currentDirection = document.getElementById('current-direction');
+        const systemStatus = document.getElementById('system-status');
+        const historyList = document.getElementById('history-list');
+        const compassLabels = document.querySelectorAll('.compass-label');
+        const particleContainer = document.getElementById('particle-container');
+
+        // System State
+        let currentWindDirection = null;
+        let directionHistory = [];
+        let isInitialized = false;
+
+        // TENG Direction Mappings
+        const tengDirections = {
+            'none': { display: 'No Wind', class: 'none', angle: 0 },
+            'north': { display: 'North', class: 'north', angle: 0 },
+            'northeast': { display: 'Northeast', class: 'northeast', angle: 45 },
+            'east': { display: 'East', class: 'east', angle: 90 },
+            'southeast': { display: 'Southeast', class: 'southeast', angle: 135 },
+            'south': { display: 'South', class: 'south', angle: 180 },
+            'southwest': { display: 'Southwest', class: 'southwest', angle: 225 },
+            'west': { display: 'West', class: 'west', angle: 270 },
+            'northwest': { display: 'Northwest', class: 'northwest', angle: 315 }
+        };
+
+        // Initialize the system with animation
+        function initializeSystem() {
+            // Initial calibration sweep
+            directionArrow.style.animation = 'initialSweep 4s ease-in-out forwards';
+            systemStatus.textContent = "Calibrating TENG sensors...";
+            
+            setTimeout(() => {
+                directionArrow.style.animation = '';
+                systemStatus.textContent = "System ready - detecting wind direction";
+                isInitialized = true;
+                
+                // Start checking for MIT App Inventor data
+                setInterval(checkForAppInventorData, 1000);
+            }, 4000);
+        }
+
+        // Check for data from MIT App Inventor
+        function checkForAppInventorData() {
+             setInterval(() => {
+                if (typeof window.AppInventor !== 'undefined') {
+                    const data = window.AppInventor.getWebViewString();
+                    if (data) {
+                        processData(data);
+                    }
+                }
+            }, 500);
+        }
+
+        // Process direction data from MIT App Inventor
+        function processData(rawData) {
+            if (!isInitialized) return;
+            
+            const direction = String(rawData).trim().toLowerCase();
+            if (!tengDirections[direction]) return;
+            
+            updateWindDirection(direction);
+        }
+
+        // Update the wind direction display
+        function updateWindDirection(direction) {
+            if (currentWindDirection === direction) return;
+            
+            const tengData = tengDirections[direction];
+            currentWindDirection = direction;
+            
+            // Update compass arrow
+            directionArrow.style.transform = `rotate(${tengData.angle}deg)`;
+            
+            // Update display
+            currentDirection.textContent = tengData.display;
+            systemStatus.textContent = `TENG sensor detected ${tengData.display.toLowerCase()} wind`;
+            
+            // Highlight direction label
+            highlightDirectionLabel(direction);
+            
+            // Add to history if direction changed
+            if (direction !== 'none') {
+                addToHistory(tengData.display);
+            }
+            
+            // Create subtle visualization particles
+            createDirectionParticles(direction);
+        }
+
+        // Highlight the current direction label
+        function highlightDirectionLabel(direction) {
+            compassLabels.forEach(label => {
+                label.style.animation = 'none';
+                label.style.color = 'var(--text-color)';
+            });
+                // Hide arrow needle for 'none' case
+            if (direction === 'none') {
+                document.getElementById('direction-arrow').style.display = 'none';
+                return; // Exit early since we don't need to highlight any direction
+            } else {
+                // Show arrow for all other directions
+                document.getElementById('direction-arrow').style.display = 'block';
+            }
+            let labelToHighlight;
+            switch(direction) {
+                case 'north': case 'northeast': case 'northwest':
+                    labelToHighlight = document.querySelector('.n'); break;
+                case 'east':
+                    labelToHighlight = document.querySelector('.e'); break;
+                case 'south': case 'southeast': case 'southwest':
+                    labelToHighlight = document.querySelector('.s'); break;
+                case 'west':
+                    labelToHighlight = document.querySelector('.w'); break;
+                    
+            }
+            
+            if (labelToHighlight) {
+                labelToHighlight.style.animation = 'highlightDirection 2s infinite';
+            }
+        }
+
+        // Add new direction to history
+        function addToHistory(direction) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            directionHistory.unshift({
+                direction: direction,
+                time: timeString
+            });
+            
+            // Keep only last 10 items
+            if (directionHistory.length > 10) {
+                directionHistory.pop();
+            }
+            
+            updateHistoryDisplay();
+        }
+
+        // Update the history list display
+        function updateHistoryDisplay() {
+            historyList.innerHTML = '';
+            
+            directionHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <span class="history-direction">${item.direction}</span>
+                    <span class="history-time">${item.time}</span>
+                `;
+                historyList.appendChild(historyItem);
+            });
+        }
+
+        // Create subtle particles for wind direction visualization
+        function createDirectionParticles(direction) {
+            if (direction === 'none') {
+                particleContainer.innerHTML = '';
+                return;
+            }
+            
+            // Clear existing particles
+            particleContainer.innerHTML = '';
+            
+            // Create new particles based on direction
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                    createParticle(direction);
+                }, i * 150);
+            }
+        }
+
+        // Create individual particle
+        function createParticle(direction) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            const size = Math.random() * 4 + 2;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            // Position based on direction
+            let startX, startY;
+            const edge = Math.floor(Math.random() * 4);
+            
+            switch(direction) {
+                case 'north':
+                    startX = Math.random() * window.innerWidth;
+                    startY = -size;
+                    break;
+                case 'east':
+                    startX = window.innerWidth + size;
+                    startY = Math.random() * window.innerHeight;
+                    break;
+                case 'south':
+                    startX = Math.random() * window.innerWidth;
+                    startY = window.innerHeight + size;
+                    break;
+                case 'west':
+                    startX = -size;
+                    startY = Math.random() * window.innerHeight;
+                    break;
+                case 'northeast':
+                    startX = Math.random() > 0.5 ? window.innerWidth + size : Math.random() * window.innerWidth;
+                    startY = Math.random() > 0.5 ? -size : Math.random() * window.innerHeight;
+                    break;
+                case 'southeast':
+                    startX = Math.random() > 0.5 ? window.innerWidth + size : Math.random() * window.innerWidth;
+                    startY = Math.random() > 0.5 ? window.innerHeight + size : Math.random() * window.innerHeight;
+                    break;
+                case 'southwest':
+                    startX = Math.random() > 0.5 ? -size : Math.random() * window.innerWidth;
+                    startY = Math.random() > 0.5 ? window.innerHeight + size : Math.random() * window.innerHeight;
+                    break;
+                case 'northwest':
+                    startX = Math.random() > 0.5 ? -size : Math.random() * window.innerWidth;
+                    startY = Math.random() > 0.5 ? -size : Math.random() * window.innerHeight;
+                    break;
+            }
+            
+            particle.style.left = `${startX}px`;
+            particle.style.top = `${startY}px`;
+            
+            const duration = Math.random() * 5 + 3;
+            particle.style.opacity = '0.7';
+            
+            // Calculate end position based on direction
+            let angleRad;
+            switch(direction) {
+                case 'north': angleRad = Math.PI / 2; break;
+                case 'northeast': angleRad = Math.PI / 4; break;
+                case 'east': angleRad = Math.PI; break;
+                case 'southeast': angleRad = 5 * Math.PI / 4; break;
+                case 'south': angleRad = 3 * Math.PI / 2; break;
+                case 'southwest': angleRad = 7 * Math.PI / 4; break;
+                case 'west': angleRad = 0; break;
+                case 'northwest': angleRad = 7 * Math.PI / 4; break;
+            }
+            
+            const distance = window.innerWidth * 0.3;
+            const endX = startX + Math.cos(angleRad) * distance;
+            const endY = startY + Math.sin(angleRad) * distance;
+            
+            particle.style.transform = `translate(0, 0)`;
+            particle.style.transition = `transform ${duration}s linear, opacity ${duration}s ease-out`;
+            
+            setTimeout(() => {
+                particle.style.transform = `translate(${endX - startX}px, ${endY - startY}px)`;
+                particle.style.opacity = '0';
+            }, 10);
+            
+            particle.addEventListener('transitionend', () => {
+                particle.remove();
+            });
+            
+            particleContainer.appendChild(particle);
+        }
+
+        function highlightDirectionLabel(direction) {
+            compassLabels.forEach(label => {
+                label.style.animation = 'none';
+                label.style.color = 'var(--text-color)';
+            });
+            
+            let labelToHighlight;
+            switch(direction.toLowerCase()) {
+                case 'north': case 'northeast': case 'northwest':
+                    labelToHighlight = document.querySelector('.n'); break;
+                case 'east':
+                    labelToHighlight = document.querySelector('.e'); break;
+                case 'south': case 'southeast': case 'southwest':
+                    labelToHighlight = document.querySelector('.s'); break;
+                case 'west':
+                    labelToHighlight = document.querySelector('.w'); break;
+            }
+            
+            if (labelToHighlight) {
+                labelToHighlight.style.animation = 'highlightDirection 2s infinite';
+            }
+        }
+
+        // Start the system
+        setTimeout(initializeSystem, 500);
+
+        // MIT App Inventor interface
+        window.TENGWindSystem = {
+            updateDirection: function(direction) {
+                processDirectionData(direction);
+            },
+            getCurrentStatus: function() {
+                return {
+                    direction: currentDirection.textContent,
+                    status: systemStatus.textContent,
+                    history: directionHistory
+                };
+            }
+        };
+    </script>
+</body>
+</html>
